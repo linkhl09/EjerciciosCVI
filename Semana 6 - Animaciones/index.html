@@ -1,0 +1,21 @@
+<html>
+<script src="https://rawgit.com/mdn/webgl-examples/gh-pages/tutorial/gl-matrix.js"></script>
+<body>
+  <div id="container">
+    <label id="camlabel" style="whiteCaracter">Views: </label>
+    <button id "button1" onclick="button1()" class="button"> General</button>
+    <button id "button2" onclick="button2()" class="button">Top </button>
+    <button id "button3" onclick="button3()" class="button"> 3</button>  
+    <div class="slidecontainer">
+      <label id="speedLabel" style="whiteCaracter">Speed movement:</label>
+      <input id="speedRange" type="range" min="0" max="1000" value="100" class="slider slider-x">
+    </div>
+  </div>
+  <canvas id="glcanvas" width="700" height="700"></canvas>
+</body>
+<script src="scripts/utils.js"></script>
+<script src="scripts/figures.js"></script>
+<script src="scripts/bezier.js"></script>
+<script src="scripts/main.js"></script>
+<link rel="stylesheet" href="style/style.css" type="text/css">
+</html>
