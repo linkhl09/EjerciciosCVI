@@ -37,7 +37,7 @@ const faceColors = [
  * Returns:  primitiveType: primitive used for drawing.
  *           numVer:        Number of vertex of the figure.
  *           positions:     Vertices of the figure.
- *           normal:        {Optional} I have no idea what is this for.
+ *           textCoord:     Texture coordinates.
  *           colors:        Array with uniform colors for al the vertices.
  *           indices:       Index to create the figure.
  */
@@ -52,6 +52,13 @@ function createPlaneVertices( height, width )
     0 * width, 1 * height, 0, // Left top corner
     1 * width, 1 * height, 0, // Right top corner
   ];
+
+  const textCoord = [
+    0 , 0 , 0, // Left bottom corner
+    1 , 0 , 0, // Right bottom corner
+    0 , 1 , 0, // Left top corner
+    1 , 1 , 0, // Right top corner
+  ];
   
   const indices = [
     0, 1, 2,
@@ -63,11 +70,12 @@ function createPlaneVertices( height, width )
   {
     colors = colors.concat([1.0, 1.0, 1.0, 1.0]);
   }
-  
+
   return {
     primitiveType: TRIANGLES,
     numVer: indices.length,
     positions: positions,
+    textCoord: textCoord,
     colors: colors,
     indices: indices,
   }
@@ -83,7 +91,7 @@ function createPlaneVertices( height, width )
  * Returns:  primitiveType: primitive used for drawing.
  *           numVer:        Number of vertex of the figure.
  *           positions:     Vertices of the figure.
- *           normal:        {Optional} I have no idea what is this for.
+ *           textCoord:     Texture coordinates.
  *           colors:        Array with uniform colors for al the vertices.
  *           indices:       Index to create the figure.
  */
@@ -97,6 +105,7 @@ function createCircleVertices( radius, center, sides )
   let positions = center;
   const advance = 360 / sides;
   let angle = 0;
+  
   while (angle < 361)
   {
     const x = radius * Math.cos(degToRad(angle)); 
