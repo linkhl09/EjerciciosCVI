@@ -255,7 +255,7 @@ function createSphereVertices( radius, subdivisionsAxis, subdivisionsHeight )
       const z = sinTheta * sinPhi;
       const point = [radius*x, radius*y, radius*z];
       positions = positions.concat(point);
-      normals = nomals.concat(point);
+      normals = normals.concat(point);
       const pCoord = [u, v];
       textureCoord = textureCoord.concat(pCoord);
     }

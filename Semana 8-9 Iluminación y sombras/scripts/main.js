@@ -8,6 +8,8 @@ const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
 
 let programInfo = {};
 
+let shadowProgramInfo = {};
+
 //----------------------------------------------------------------------------------
 // General initial values
 //----------------------------------------------------------------------------------
@@ -37,6 +39,8 @@ let camera ={
   firstPerson: false,
 };
 
+let elapsed = 0;
+
 /**
  * Initial settings of the camera.
  */
@@ -44,37 +48,6 @@ mat4.translate(viewMatrix, viewMatrix, camera.position);
 mat4.rotate(viewMatrix, viewMatrix, camera.pitch, [1.0, 0.0, 0.0]);
 mat4.rotate(viewMatrix, viewMatrix, camera.yaw, [0.0, 1.0, 0.0]);
 mat4.rotate(viewMatrix, viewMatrix, camera.roll, [0.0, 0.0, 1.0]);
-
-
-// -----CURVE----
-let gbCurve = {
-  lutindex: 0,
-  startPoint : [],
-  endPoint : [],
-  controlPoint1 : [],
-  controlPoint2 : [],
-};
-
-initCurve(gbCurve, [], [], [], []);
-
-//-----ANIMATION-----
-/**let chopter = {
-  speed: 0.001,
-  startTime: 0,
-  position: curve.startPoint,
-};*/
-
-let lastTime = 0;
-let elapsed = 0;
-
-// -----TEXTURES-----
-const textures = {
-  golfBall: "a",
-  grass: "a",
-  background: "a",
-  club: "a",
-};
-
 
 //----------------------------------------------------------------------------------
 // Scene graph
@@ -93,94 +66,16 @@ let nodesList = [];
   // If we wanna make general changes, we transform the root of our graph
   mat4.translate(mainNode.localMatrix, mainNode.localMatrix, ROOT_POSITION);
 
-  // ------------ scene ------------
-  let sceneNode = new Node();
-
-  let planesVertices = createPlaneVertices(40, 40);
   
-  let backgroundNode = new Node();
-  backgroundNode.buffers = initBuffers(planesVertices, gl);
-  backgroundNode.texture = loadTexture("textures/bg.jpg", gl);
-  mat4.translate(backgroundNode.localMatrix, backgroundNode.localMatrix, [-20.0, -2.0, 2.0]);
-  nodesList.push(backgroundNode)
-  
-  let floorNode = new Node();
-  let colors = [];
-  for(let i = 0; i < planesVertices.colors.length; i++)
-    colors = colors.concat(normRGB(176,224,230));
-  planesVertices.colors = colors;
-
-  floorNode.buffers = initBuffers(planesVertices, gl);
-  floorNode.texture = loadTexture("textures/gras-texture-golf.jpg", gl);
-  mat4.translate(floorNode.localMatrix, floorNode.localMatrix, [-20.0, -0.0, 2.0]);
-  mat4.rotate(floorNode.localMatrix, floorNode.localMatrix, degToRad(90), [1.0, 0.0, 0.0]);
-  nodesList.push(floorNode);
-
-
-  // ------------ Cylinder ------------
-  const falgColor = normRGB(192,192,192);
-  const circleBuffers = initBuffers(createCircleVertices(0.5), gl);
-  const metalTexture = loadTexture("textures/metal.jpg", gl);
-
-  let fullCylinderNode = new Node();  
-  mat4.translate(fullCylinderNode.localMatrix, fullCylinderNode.localMatrix, [10.0, 0.0, 0.0]);
-  
-  let cylinderNode = new Node();
-  cylinderNode.buffers = initBuffers(createCylinderVertices(0.5, 0.5, 10.0), gl);
-  cylinderNode.texture = metalTexture;
-  nodesList.push(cylinderNode);
-  
-  let cylinderBaseNode = new Node();
-  mat4.rotate(cylinderBaseNode.localMatrix, cylinderBaseNode.localMatrix, degToRad(90), [1.0, 0.0, 0.0]);
-  cylinderBaseNode.buffers = circleBuffers;
-  cylinderBaseNode.texture = metalTexture;
-  nodesList.push(cylinderBaseNode);
-
-  let cylinderTopNode = new Node();
-  mat4.translate(cylinderTopNode.localMatrix, cylinderTopNode.localMatrix, [0.0, 10.0, 0.0]);
-  mat4.rotate(cylinderTopNode.localMatrix, cylinderTopNode.localMatrix, degToRad(90), [1.0, 0.0, 0.0]);
-  cylinderTopNode.buffers = circleBuffers;
-  cylinderTopNode.texture = metalTexture;
-  nodesList.push(cylinderTopNode);
-
-
-  // ------------ Cone ------------
-  let fullConeNode = new Node();
-  mat4.translate(fullConeNode.localMatrix, fullConeNode.localMatrix, [-10.0, 2.0, 0.0]);
-  mat4.rotate(fullConeNode.localMatrix, fullConeNode.localMatrix, degToRad(180), [1.0, 0.0, 0.0]);
-
-  let coneNode = new Node();
-  coneNode.buffers = initBuffers(createCylinderVertices(1, 0.0, 2.0), gl);
-  coneNode.texture = metalTexture;
-  nodesList.push(coneNode);
-
-  let coneBaseNode = new Node();
-  mat4.rotate(coneBaseNode.localMatrix, coneBaseNode.localMatrix, degToRad(90), [1.0, 0.0, 0.0]);
-  coneBaseNode.buffers = initBuffers(createCircleVertices(1), gl);
-  coneBaseNode.texture = metalTexture;
-  nodesList.push(coneBaseNode);
 
   // ------------ Sphere ------------
   let sphereNode = new Node();
   mat4.translate(sphereNode.localMatrix, sphereNode.localMatrix, [-10.0, 3.0, 0.0]);
   sphereNode.buffers = initBuffers(createSphereVertices(2), gl);
-  sphereNode.texture = loadTexture("textures/golf-ball-texture.jpg", gl );
   nodesList.push(sphereNode);
 
 
   // ------------ graph ------------
-  backgroundNode.setParent(sceneNode);
-  floorNode.setParent(sceneNode);
-
-  fullCylinderNode.setParent(mainNode);
-  cylinderNode.setParent(fullCylinderNode);
-  cylinderBaseNode.setParent(fullCylinderNode);
-  cylinderTopNode.setParent(fullCylinderNode);
-
-  fullConeNode.setParent(mainNode);
-  coneNode.setParent(fullConeNode);
-  coneBaseNode.setParent(fullConeNode);
-
   sphereNode.setParent(mainNode);
 
 
@@ -196,29 +91,61 @@ function main()
   if (!gl) {
     return;
   }
-  // Initialize a shader program; this is where all the lighting
-  // for the vertices and so forth is established.
-  const shaderProgram = initShaderProgram(gl);
+
+  const programs = initPrograms(gl);
+
+  const shaderProgram = programs.shaderProgram;
+
+  const shaderShadowProgram = programs.shaderShadowProgram;
 
   /**
   * Collect all the info needed to use the shader program.
-  * Look up which attributes our shader program is using
-  * for aVertexPosition, aVevrtexColor and also
+  * Look up which attributes our shader program is using and also
   * look up uniform locations.
   */
   programInfo = {
     program: shaderProgram,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-      aTextureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+      textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+      vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+      vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
       modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-      textureLocation: gl.getUniformLocation(shaderProgram, "uSampler"),
+      normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+      //textureLocation: gl.getUniformLocation(shaderProgram, "uSampler"),
+      uShadowSampler: gl.getUniformLocation(shaderProgram, 'uShadowSampler'),
+      sunDirectionalVector: gl.getUniformLocation(shaderProgram, 'uSunDirectionalVector'),
+      isSun: gl.getUniformLocation(shaderProgram, 'uIsSun'),
+      isLightPole: gl.getUniformLocation(shaderProgram, 'uIsLightPole'),
+      shadowMapTransformMatrix: gl.getUniformLocation(shaderProgram, 'uShadowMapTransformMatrix'),
+      applyShadow: gl.getUniformLocation(shaderProgram, 'uApplyShadow'),
     },
   };
   
+  shadowProgramInfo = {
+    program : shaderShadowProgram,
+    attribLocations: {
+      vertexPosition: gl.getAttribLocation(shaderShadowProgram, 'aVertexPosition'),
+      textureCoord: gl.getAttribLocation(shaderShadowProgram, 'aTextureCoord'),
+      vertexNormal: gl.getAttribLocation(shaderShadowProgram, 'aVertexNormal'),
+    },
+    uniformLocations:{
+      projectionMatrix: gl.getUniformLocation(shaderShadowProgram, 'uProjectionMatrix'),
+      modelViewMatrix: gl.getUniformLocation(shaderShadowProgram, 'uModelViewMatrix'),
+      normalMatrix: gl.getUniformLocation(shaderShadowProgram, 'uNormalMatrix'),
+      uShadowSampler: gl.getUniformLocation(shaderShadowProgram, 'uShadowSampler'),
+      sunDirectionalVector: gl.getUniformLocation(shaderShadowProgram, 'uSunDirectionalVector'),
+      isSun: gl.getUniformLocation(shaderShadowProgram, 'uIsSun'),
+      isLightPole: gl.getUniformLocation(shaderShadowProgram, 'uIsLightPole'),
+      shadowMapTransformMatrix: gl.getUniformLocation(shaderShadowProgram, 'uShadowMapTransformMatrix'),
+      applyShadow: gl.getUniformLocation(shaderShadowProgram, 'uApplyShadow'),
+    },
+  };
+
+   
   //Function that manages the drawing and animation
   tick();
   
@@ -252,7 +179,6 @@ function drawScene( programInfo, deltaTime )
 
   // Always update from the main vertex, no matter which is it.
   mainNode.updateWorldMatrix();
-  sceneNode.updateWorldMatrix();
   
   /**
    * Here's the drawing programm of the previous defined figures.
@@ -341,6 +267,5 @@ function tick()
   requestAnimationFrame(tick);
 
   drawScene(programInfo, elapsed);
-  animate();
 }
 

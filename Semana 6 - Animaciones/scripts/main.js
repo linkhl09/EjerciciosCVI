@@ -41,7 +41,7 @@ let viewMatrix = mat4.create();
  */
 let camera ={
   position: [0.0, 0.0, -50.0],
-  iversePosition: vec3.create(),
+  inversePosition: vec3.create(),
   pitch:  0,
   yaw:    0,
   roll:   0,
@@ -359,11 +359,12 @@ function drawScene( programInfo, deltaTime )
   
   if(camera.firstPerson)
   {
-    camera.position = [point.x , point.y + 2.1, point.z];
+    camera.position = [point.x , point.y + 2.1, point.z - 3];
     camera.pitch = 10;
     camera.yaw = angle;
-    vec3.negate(camera.position, camera.inversePosition);
-    mat4.rotate(viewMatrix, viewMatrix, camera.pitch, [1.0, 0.0, 0.0]);
+    vec3.negate(camera.inversePosition,camera.position);
+    let identity = mat4.create();  
+    mat4.rotate(viewMatrix, identity, camera.pitch, [1.0, 0.0, 0.0]);
     mat4.rotate(viewMatrix, viewMatrix, camera.yaw, [0.0, 1.0, 0.0]);
     mat4.translate(viewMatrix, viewMatrix, camera.inversePosition);
   }
@@ -445,7 +446,7 @@ function button1()
  */
 function button2()
 {
-  firstPerson = false;
+  camera.firstPerson = false;
   viewMatrix = mat4.create();
   mat4.translate(viewMatrix, viewMatrix, camera.position);
   mat4.rotate(viewMatrix, viewMatrix, degToRad(90), [1.0,0.0,0.0]);
@@ -457,8 +458,7 @@ function button2()
  */
 function button3()
 {
-  viewMatrix = mat4.create();
-  firstPerson = true;
+  camera.firstPerson = true;
 }
 
 

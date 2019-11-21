@@ -8,28 +8,42 @@ function loadTexture(url, gl)
   gl.bindTexture(gl.TEXTURE_2D, texture);
   // It takes time, so first we load the texture as a point
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(normRGB(0,0,255)));
+
+  // let's assume all images are not a power of 2
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
   // Then, we start loading the texture asynchronously.
   var textureInfo = {
     width: 1,   // we don't know the size until it loads
     height: 1,
     texture: texture,
   };
+
   let image = new Image();
-  image.crossOrigin = "anonymous";
-  image.src = url;
   image.addEventListener('load', function()
   {
     textureInfo.width = image.width;
     textureInfo.height = image.height;
 
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.bindTexture(gl.TEXTURE_2D, textureInfo.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
     gl.generateMipmap(gl.TEXTURE_2D);
   });
+  if( url.includes("http"))
+    requestCORSIfNotSameOrigin(image, url);
+  image.src = url;
 
   return texture;
 }
 
+function requestCORSIfNotSameOrigin(img, url) 
+{
+  if ((new URL(url)).origin !== window.location.origin) 
+    img.crossOrigin = "";
+}
 
 //-------------------------------------------------------------------------------------
 // Curve functions
@@ -146,15 +160,17 @@ function initBuffers(data, gl)
   const primitiveType     = data.primitiveType;
   const numVer            = data.numVer;
   const positionBuffer    = createBuffer(data.positions, gl);
-  const colorBuffer       = createBuffer(data.colors, gl);  
   const indexBuffer       = createIndexBuffer(data.indices, gl);
+  if ( data.colors !== undefined)
+    const colorBuffer       = createBuffer(data.colors, gl);  
+  
   const textureBuffer     = createBuffer(data.textCoord, gl);
   
   return {
     primitiveType:  primitiveType,
     numVer:         numVer,
     position:       positionBuffer,
-    textCoord:      textureBuffer,
+    textureCoord:      textureBuffer,
     color:          colorBuffer,
     indices:        indexBuffer,
   };
